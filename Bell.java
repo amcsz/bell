@@ -90,7 +90,7 @@ public class Bell extends OpMode {
             
                 if (moveTimer.seconds() < 10.0) {
                     double correction = getCorrection();
-                    double basePower = 0.3;
+                    double basePower = 0.25;
             
                     double leftPower = (basePower - correction * direction) * direction;
                     double rightPower = (basePower + correction * direction) * direction;
@@ -131,6 +131,8 @@ public class Bell extends OpMode {
     private double getCorrection() {
         double yaw = getYaw();
         double gain = 0.01;
-        return -yaw * gain;
+        double bias = -0.07;
+        if (direction == -1) bias = 0.07;
+        return -yaw * gain + bias;
     }
 }
