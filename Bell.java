@@ -53,7 +53,7 @@ public class Bell extends OpMode {
 
     State state = State.WAITING;
 
-    final double BASE_POWER = 0.4;          // The base forward speed of the robot.
+    final double BASE_POWER = 0.23;          // The base forward speed of the robot.
 
     @Override
     public void init() {
@@ -83,14 +83,8 @@ public class Bell extends OpMode {
         int hour = now.get(Calendar.HOUR_OF_DAY);
         int minute = now.get(Calendar.MINUTE);
         int second = now.get(Calendar.SECOND);
-        telemetry.addData("State", state);
-        telemetry.addData("Time", String.format("%02d:%02d:%02d", hour, minute, second));
-        telemetry.addData("numberRan", numberRan);
-        telemetry.addData("front sensor", DF.getDistance(DistanceUnit.MM));
-        telemetry.addData("back sensor", DB.getDistance(DistanceUnit.MM));
-        telemetry.addData("emergency", E1.getDistance(DistanceUnit.MM));
-        telemetry.update();
-        if (E1.getDistance(DistanceUnit.CM) > 10) {
+        
+        if (E1.getDistance(DistanceUnit.CM) > 10 || E1.getDistance(DistanceUnit.CM) < 3) {
             led.setState(true);
             requestOpModeStop();
         }
@@ -103,6 +97,13 @@ public class Bell extends OpMode {
                 || hasReachedTime(hour, minute, second, 12, 44, 30) && (!ran[3])) {
                     state = State.RUNNING_ACTION;
                 }
+                telemetry.addData("State", state);
+                telemetry.addData("Time", String.format("%02d:%02d:%02d", hour, minute, second));
+                telemetry.addData("numberRan", numberRan);
+                telemetry.addData("front sensor", DF.getDistance(DistanceUnit.CM));
+                telemetry.addData("back sensor", DB.getDistance(DistanceUnit.CM));
+                telemetry.addData("emergency", E1.getDistance(DistanceUnit.CM));
+                telemetry.update();
                 break;
 
             case RUNNING_ACTION:
@@ -110,37 +111,36 @@ public class Bell extends OpMode {
                     moveTimer.reset();
                     isMoving = true;
                 }
+                
             
 
                 if (moveTimer.seconds() < TIME_PER_RUN) {
                     double leftPower = BASE_POWER * direction, rightPower = BASE_POWER * direction;
                     if (direction == -1) {
-                        leftPower += 0.1;
-                        rightPower += 0.1;
+                        leftPower -= 0.04;
+                    } else if (direction == 1) {
+                        leftPower += 0.04;
                     }
-                    double front_dist = DF.getDistance(DistanceUnit.MM);
-                    double back_dist = DB.getDistance(DistanceUnit.MM);
+                    double front_dist = DF.getDistance(DistanceUnit.CM);
+                    double back_dist = DB.getDistance(DistanceUnit.CM);
+                    double diff = Math.abs(Math.abs(front_dist - back_dist) - 0.2);
+                    
                     if (front_dist < back_dist) {
                         if (direction == 1) {
-                            rightPower += (back_dist / front_dist) / 5;
+                            rightPower += diff / 5;
                         } else {
-                            leftPower -= (back_dist / front_dist) / 5;
+                            leftPower -= diff / 5;
                         }
                     } else {
                         if (direction == 1) {
-                            leftPower += (front_dist / back_dist) / 5;
+                            leftPower += diff / 5;
                         } else {
-                            rightPower -= (front_dist / back_dist) / 5;
+                            rightPower -= diff / 5;
                         }
                         
                     }
                     
-                    if (direction == -1) {
-                        leftPower -= 0.025;
-                    } else {
-                        leftPower -= 0.05;
-                        rightPower -= 0.05;
-                    }
+                    
                     leftPower = Math.min(Math.max(leftPower, -1), 1);
                     rightPower = Math.min(Math.max(rightPower, -1), 1);
                     l.setPower(leftPower);
@@ -160,8 +160,11 @@ public class Bell extends OpMode {
                             telemetry.addData("dir", "moving right");
                         }
                     }
+                    telemetry.addData("front sensor", DF.getDistance(DistanceUnit.CM));
+                    telemetry.addData("back sensor", DB.getDistance(DistanceUnit.CM));
+                    telemetry.addData("emergency", E1.getDistance(DistanceUnit.CM));
                     telemetry.update();
-                    // b.setPower(-1 * BELL_SPEED);
+                    b.setPower(-1 * BELL_SPEED);
                 } else {
                     l.setPower(0);
                     r.setPower(0);
@@ -183,8 +186,8 @@ public class Bell extends OpMode {
     }
     private boolean hasReachedTime(int hNow, int mNow, int sNow, int hTarget, int mTarget, int sTarget) {
     return (hNow > hTarget ||
-            (hNow == hTarget && (mNow > mTarget || (mNow == mTarget && sNow >= sTarget)))) &&
-           (hNow < hTarget ||
-            (hNow == hTarget && (mNow < mTarget + 1 || (mNow == mTarget + 1 && sNow < sTarget))));
+            (hNow == hTarget && (mNow > mTarget || (mNow == mTarget && sNow >= sTarget))));// &&
+        //   (hNow < hTarget ||
+        //     (hNow == hTarget && (mNow < mTarget + 1 || (mNow == mTarget + 1 && sNow < sTarget))));
 }
     }
