@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.hardware.rev.RevColorSensorV3;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
@@ -15,20 +14,20 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import com.qualcomm.robotcore.hardware.IMU;
+import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import java.util.Calendar;
+import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.robotcore.internal.system.Deadline;
 
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
+import java.util.concurrent.TimeUnit;
 
 @Autonomous(name = "Bell", group = "Autonomous")
 public class Bell extends OpMode {
 
-    private final double BASE_POWER = 0.3;
     private final double BELL_SPEED = 1;
     private final double TIME_PER_RUN = 10;
     
@@ -36,10 +35,12 @@ public class Bell extends OpMode {
     private DcMotor l;
     private DcMotor r;
     private DcMotor b;
-    private IMU imu;
     
-    private RevColorSensorV3 c1;
-    private DistanceSensor d1;
+    private DistanceSensor E1;
+    private DistanceSensor DF;
+    private DistanceSensor DB;
+    
+    private DigitalChannel led;
     
     private boolean[] ran = new boolean[4];
     private int numberRan = 0;
@@ -52,32 +53,26 @@ public class Bell extends OpMode {
 
     State state = State.WAITING;
 
+    final double BASE_POWER = 0.4;          // The base forward speed of the robot.
+
     @Override
     public void init() {
         l = hardwareMap.dcMotor.get("l");
         r = hardwareMap.dcMotor.get("r");
         b = hardwareMap.dcMotor.get("b");
         
-        imu = hardwareMap.get(IMU.class, "imu");
+        led = hardwareMap.get(DigitalChannel.class, "L1");
+        led.setMode(DigitalChannel.Mode.OUTPUT);
         
-        c1 = hardwareMap.get(RevColorSensorV3.class, "C1");
-        d1 = hardwareMap.get(DistanceSensor.class, "D1");
 
-        IMU.Parameters imuParams = new IMU.Parameters(
-                new RevHubOrientationOnRobot(
-                        RevHubOrientationOnRobot.LogoFacingDirection.RIGHT,
-                        RevHubOrientationOnRobot.UsbFacingDirection.UP
-                )
-        );
-        imu.initialize(imuParams);
-        imu.resetYaw();
+        E1 = hardwareMap.get(DistanceSensor.class, "E1");
+        DF = hardwareMap.get(DistanceSensor.class, "DF");
+        DB = hardwareMap.get(DistanceSensor.class, "DB");
 
         l.setDirection(DcMotorSimple.Direction.REVERSE);
         r.setDirection(DcMotorSimple.Direction.FORWARD);
         b.setDirection(DcMotorSimple.Direction.FORWARD);
 
-        telemetry.addData("Status", "Initialized");
-        telemetry.update();
     }
 
     
@@ -91,15 +86,21 @@ public class Bell extends OpMode {
         telemetry.addData("State", state);
         telemetry.addData("Time", String.format("%02d:%02d:%02d", hour, minute, second));
         telemetry.addData("numberRan", numberRan);
-        telemetry.addData("front sensor", ((DistanceSensor)c1).getDistance(DistanceUnit.CM) - 0.63);
-        telemetry.addData("back sensor", d1.getDistance(DistanceUnit.CM) - 1.85);
+        telemetry.addData("front sensor", DF.getDistance(DistanceUnit.MM));
+        telemetry.addData("back sensor", DB.getDistance(DistanceUnit.MM));
+        telemetry.addData("emergency", E1.getDistance(DistanceUnit.MM));
         telemetry.update();
+        if (E1.getDistance(DistanceUnit.CM) > 10) {
+            led.setState(true);
+            requestOpModeStop();
+        }
+        led.setState(false);
         switch (state) {
             case WAITING:
-                if (hasReachedTime(hour, minute, second, 9, 38, 0) && (!ran[0])
-                || hasReachedTime(hour, minute, second, 9, 38, 30) && (!ran[1])
-                || hasReachedTime(hour, minute, second, 9, 39, 0) && (!ran[2])
-                || hasReachedTime(hour, minute, second, 9, 39, 30) && (!ran[3])) {
+                if (hasReachedTime(hour, minute, second, 12, 43, 0) && (!ran[0])
+                || hasReachedTime(hour, minute, second, 12, 43, 30) && (!ran[1])
+                || hasReachedTime(hour, minute, second, 12, 44, 0) && (!ran[2])
+                || hasReachedTime(hour, minute, second, 12, 44, 30) && (!ran[3])) {
                     state = State.RUNNING_ACTION;
                 }
                 break;
@@ -110,14 +111,15 @@ public class Bell extends OpMode {
                     isMoving = true;
                 }
             
+
                 if (moveTimer.seconds() < TIME_PER_RUN) {
                     double leftPower = BASE_POWER * direction, rightPower = BASE_POWER * direction;
                     if (direction == -1) {
                         leftPower += 0.1;
                         rightPower += 0.1;
                     }
-                    double front_dist = ((DistanceSensor)c1).getDistance(DistanceUnit.CM) - 0.63;
-                    double back_dist = d1.getDistance(DistanceUnit.CM) - 1.85;
+                    double front_dist = DF.getDistance(DistanceUnit.MM);
+                    double back_dist = DB.getDistance(DistanceUnit.MM);
                     if (front_dist < back_dist) {
                         if (direction == 1) {
                             rightPower += (back_dist / front_dist) / 5;
@@ -139,10 +141,8 @@ public class Bell extends OpMode {
                         leftPower -= 0.05;
                         rightPower -= 0.05;
                     }
-
                     leftPower = Math.min(Math.max(leftPower, -1), 1);
                     rightPower = Math.min(Math.max(rightPower, -1), 1);
-            
                     l.setPower(leftPower);
                     r.setPower(rightPower);
                     telemetry.addData("left", leftPower);
@@ -161,8 +161,7 @@ public class Bell extends OpMode {
                         }
                     }
                     telemetry.update();
-                    b.setPower(-1 * BELL_SPEED);
-                    
+                    // b.setPower(-1 * BELL_SPEED);
                 } else {
                     l.setPower(0);
                     r.setPower(0);
@@ -180,11 +179,12 @@ public class Bell extends OpMode {
                 break;
             case DONE:
                 break;
-        }
+        } 
     }
-    
     private boolean hasReachedTime(int hNow, int mNow, int sNow, int hTarget, int mTarget, int sTarget) {
-        return hNow > hTarget ||
-               (hNow == hTarget && (mNow > mTarget || (mNow == mTarget && sNow >= sTarget)));
-    }
+    return (hNow > hTarget ||
+            (hNow == hTarget && (mNow > mTarget || (mNow == mTarget && sNow >= sTarget)))) &&
+           (hNow < hTarget ||
+            (hNow == hTarget && (mNow < mTarget + 1 || (mNow == mTarget + 1 && sNow < sTarget))));
+}
     }
