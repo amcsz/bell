@@ -1,35 +1,22 @@
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.hardware.IMU;
-import com.qualcomm.robotcore.hardware.DistanceSensor;
-import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import java.util.Calendar;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.State;
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
+import com.qualcomm.robotcore.hardware.LED;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import com.qualcomm.robotcore.hardware.IMU;
-import com.qualcomm.robotcore.hardware.DigitalChannel;
-import com.qualcomm.robotcore.util.ElapsedTime;
-import java.util.Calendar;
+import org.firstinspires.ftc.robotcore.external.State;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.robotcore.internal.system.Deadline;
-
-import java.util.concurrent.TimeUnit;
 
 @Autonomous(name = "Bell", group = "Autonomous")
 public class Bell extends OpMode {
 
     private final double BELL_SPEED = 1;
-    private final double TIME_PER_RUN = 10;
+    private final double TIME_PER_RUN = 30;
     
 
     private DcMotor l;
@@ -40,7 +27,7 @@ public class Bell extends OpMode {
     private DistanceSensor DF;
     private DistanceSensor DB;
     
-    private DigitalChannel led;
+    private LED led;
     
     private boolean[] ran = new boolean[4];
     private int numberRan = 0;
@@ -53,16 +40,15 @@ public class Bell extends OpMode {
 
     State state = State.WAITING;
 
-    final double BASE_POWER = 0.23;          // The base forward speed of the robot.
-
+    final double BASE_POWER = 0.1;
+    
     @Override
     public void init() {
         l = hardwareMap.dcMotor.get("l");
         r = hardwareMap.dcMotor.get("r");
         b = hardwareMap.dcMotor.get("b");
         
-        led = hardwareMap.get(DigitalChannel.class, "L1");
-        led.setMode(DigitalChannel.Mode.OUTPUT);
+        led = hardwareMap.get(LED.class, "L1");
         
 
         E1 = hardwareMap.get(DistanceSensor.class, "E1");
@@ -72,10 +58,8 @@ public class Bell extends OpMode {
         l.setDirection(DcMotorSimple.Direction.REVERSE);
         r.setDirection(DcMotorSimple.Direction.FORWARD);
         b.setDirection(DcMotorSimple.Direction.FORWARD);
-
+        led.off();
     }
-
-    
 
     @Override
     public void loop() {
@@ -85,16 +69,15 @@ public class Bell extends OpMode {
         int second = now.get(Calendar.SECOND);
         
         if (E1.getDistance(DistanceUnit.CM) > 10 || E1.getDistance(DistanceUnit.CM) < 3) {
-            led.setState(true);
+            led.on();
             requestOpModeStop();
         }
-        led.setState(false);
         switch (state) {
             case WAITING:
-                if (hasReachedTime(hour, minute, second, 12, 43, 0) && (!ran[0])
-                || hasReachedTime(hour, minute, second, 12, 43, 30) && (!ran[1])
-                || hasReachedTime(hour, minute, second, 12, 44, 0) && (!ran[2])
-                || hasReachedTime(hour, minute, second, 12, 44, 30) && (!ran[3])) {
+                if (hasReachedTime(hour, minute, second, 14, 0, 0) && (!ran[0])
+                || hasReachedTime(hour, minute, second, 15, 55, 0) && (!ran[1])
+                || hasReachedTime(hour, minute, second, 23, 0, 0) && (!ran[2])
+                || hasReachedTime(hour, minute, second, 23, 0, 30) && (!ran[3])) {
                     state = State.RUNNING_ACTION;
                 }
                 telemetry.addData("State", state);
@@ -139,6 +122,14 @@ public class Bell extends OpMode {
                         }
                         
                     }
+                    
+                    if (direction == -1 && front_dist > 5 && back_dist > 5) {
+                        leftPower -= 0.04;
+                    } else if (direction == 1 && front_dist > 5 && back_dist > 5) {
+                        rightPower = 0.01;
+                        leftPower += 0.08;
+                    }
+                    
                     
                     
                     leftPower = Math.min(Math.max(leftPower, -1), 1);
@@ -185,9 +176,9 @@ public class Bell extends OpMode {
         } 
     }
     private boolean hasReachedTime(int hNow, int mNow, int sNow, int hTarget, int mTarget, int sTarget) {
-    return (hNow > hTarget ||
-            (hNow == hTarget && (mNow > mTarget || (mNow == mTarget && sNow >= sTarget))));// &&
-        //   (hNow < hTarget ||
-        //     (hNow == hTarget && (mNow < mTarget + 1 || (mNow == mTarget + 1 && sNow < sTarget))));
-}
+        return (hNow > hTarget ||
+            (hNow == hTarget && (mNow > mTarget || (mNow == mTarget && sNow >= sTarget)))) &&
+            (hNow < hTarget ||
+            (hNow == hTarget && (mNow < mTarget + 1 || (mNow == mTarget + 1 && sNow < sTarget))));
+        }
     }
