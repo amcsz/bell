@@ -40,7 +40,7 @@ public class Bell extends OpMode {
 
     State state = State.WAITING;
 
-    final double BASE_POWER = 0.1;
+    final double BASE_POWER = 0.15;
     
     @Override
     public void init() {
@@ -122,15 +122,6 @@ public class Bell extends OpMode {
                         }
                         
                     }
-                    
-                    if (direction == -1 && front_dist > 5 && back_dist > 5) {
-                        leftPower -= 0.04;
-                    } else if (direction == 1 && front_dist > 5 && back_dist > 5) {
-                        rightPower = 0.01;
-                        leftPower += 0.08;
-                    }
-                    
-                    
                     
                     leftPower = Math.min(Math.max(leftPower, -1), 1);
                     rightPower = Math.min(Math.max(rightPower, -1), 1);
