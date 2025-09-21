@@ -17,6 +17,14 @@ public class Bell extends OpMode {
 
     private final double BELL_SPEED = 1;
     private final double TIME_PER_RUN = 30;
+    private final double BASE_POWER = 0.15;
+    
+    private final int[][] times = {
+        {14, 0, 0},
+        {14, 50, 0},
+        {15, 0, 0},
+        {15, 55, 0}
+    };
     
 
     private DcMotor l;
@@ -40,7 +48,6 @@ public class Bell extends OpMode {
 
     State state = State.WAITING;
 
-    final double BASE_POWER = 0.15;
     
     @Override
     public void init() {
@@ -74,19 +81,29 @@ public class Bell extends OpMode {
         }
         switch (state) {
             case WAITING:
-                if (hasReachedTime(hour, minute, second, 14, 0, 0) && (!ran[0])
-                || hasReachedTime(hour, minute, second, 15, 55, 0) && (!ran[1])
-                || hasReachedTime(hour, minute, second, 23, 0, 0) && (!ran[2])
-                || hasReachedTime(hour, minute, second, 23, 0, 30) && (!ran[3])) {
+                if (hasReachedTime(hour, minute, second, times[0][0], times[0][1], times[0][2]) && (!ran[0])
+                || hasReachedTime(hour, minute, second, times[1][0], times[1][1], times[1][2]) && (!ran[1])
+                || hasReachedTime(hour, minute, second, times[2][0], times[2][1], times[2][2]) && (!ran[2])
+                || hasReachedTime(hour, minute, second, times[3][0], times[3][1], times[3][2]) && (!ran[3])) {
                     state = State.RUNNING_ACTION;
+                    if (hasReachedTime(hour, minute, second, times[0][0], times[0][1], times[0][2]) && (!ran[0])
+                     || hasReachedTime(hour, minute, second, times[2][0], times[2][1], times[2][2]) && (!ran[2])) {
+                        direction = 1;
+                    }
+                    if (hasReachedTime(hour, minute, second, times[1][0], times[1][1], times[1][2]) && (!ran[1])
+                     || hasReachedTime(hour, minute, second, times[3][0], times[3][1], times[3][2]) && (!ran[3])) {
+                        direction = -1;
+                    }
+                    
                 }
                 telemetry.addData("State", state);
                 telemetry.addData("Time", String.format("%02d:%02d:%02d", hour, minute, second));
-                telemetry.addData("numberRan", numberRan);
                 telemetry.addData("front sensor", DF.getDistance(DistanceUnit.CM));
                 telemetry.addData("back sensor", DB.getDistance(DistanceUnit.CM));
-                telemetry.addData("emergency", E1.getDistance(DistanceUnit.CM));
                 telemetry.update();
+                l.setPower(0);
+                r.setPower(0);
+                b.setPower(0);
                 break;
 
             case RUNNING_ACTION:
@@ -144,16 +161,13 @@ public class Bell extends OpMode {
                     }
                     telemetry.addData("front sensor", DF.getDistance(DistanceUnit.CM));
                     telemetry.addData("back sensor", DB.getDistance(DistanceUnit.CM));
-                    telemetry.addData("emergency", E1.getDistance(DistanceUnit.CM));
+                    telemetry.addData("direction", direction);
+                    telemetry.addData("timer", moveTimer.seconds());
                     telemetry.update();
                     b.setPower(-1 * BELL_SPEED);
                 } else {
-                    l.setPower(0);
-                    r.setPower(0);
-                    b.setPower(0);
                     ran[numberRan] = true;
                     numberRan++;
-                    direction *= -1;
                     if (numberRan == 4) {
                         state = State.DONE;
                     } else {
@@ -168,7 +182,8 @@ public class Bell extends OpMode {
     }
     private boolean hasReachedTime(int hNow, int mNow, int sNow, int hTarget, int mTarget, int sTarget) {
         return (hNow > hTarget ||
-            (hNow == hTarget && (mNow > mTarget || (mNow == mTarget && sNow >= sTarget)))) &&
+            (hNow == hTarget && (mNow > mTarget || (mNow == mTarget && sNow >= sTarget))))
+            &&
             (hNow < hTarget ||
             (hNow == hTarget && (mNow < mTarget + 1 || (mNow == mTarget + 1 && sNow < sTarget))));
         }
