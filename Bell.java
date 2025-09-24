@@ -9,8 +9,6 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.LED;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.robotcore.external.State;
-import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 @Autonomous(name = "Bell", group = "Autonomous")
 public class Bell extends OpMode {
@@ -18,45 +16,44 @@ public class Bell extends OpMode {
     private final double BELL_SPEED = 1;
     private final double TIME_PER_RUN = 30;
     private final double BASE_POWER = 0.15;
-    
+
+    private final boolean enableLateRuns = false;
+
     private final int[][] times = {
         {14, 0, 0},
         {14, 50, 0},
         {15, 0, 0},
         {15, 55, 0}
     };
-    
 
     private DcMotor l;
     private DcMotor r;
     private DcMotor b;
-    
+
     private DistanceSensor E1;
     private DistanceSensor DF;
     private DistanceSensor DB;
-    
+
     private LED led;
-    
+
     private boolean[] ran = new boolean[4];
     private int numberRan = 0;
-    
+
     private ElapsedTime moveTimer = new ElapsedTime();
     private boolean isMoving = false;
     private int direction = 1;
-    
+
     enum State { WAITING, RUNNING_ACTION, DONE }
 
     State state = State.WAITING;
 
-    
     @Override
     public void init() {
         l = hardwareMap.dcMotor.get("l");
         r = hardwareMap.dcMotor.get("r");
         b = hardwareMap.dcMotor.get("b");
-        
+
         led = hardwareMap.get(LED.class, "L1");
-        
 
         E1 = hardwareMap.get(DistanceSensor.class, "E1");
         DF = hardwareMap.get(DistanceSensor.class, "DF");
@@ -74,11 +71,12 @@ public class Bell extends OpMode {
         int hour = now.get(Calendar.HOUR_OF_DAY);
         int minute = now.get(Calendar.MINUTE);
         int second = now.get(Calendar.SECOND);
-        
+
         if (E1.getDistance(DistanceUnit.CM) > 10 || E1.getDistance(DistanceUnit.CM) < 3) {
             led.on();
             requestOpModeStop();
         }
+
         switch (state) {
             case WAITING:
                 if (hasReachedTime(hour, minute, second, times[0][0], times[0][1], times[0][2]) && (!ran[0])
@@ -94,7 +92,7 @@ public class Bell extends OpMode {
                      || hasReachedTime(hour, minute, second, times[3][0], times[3][1], times[3][2]) && (!ran[3])) {
                         direction = -1;
                     }
-                    
+
                 }
                 telemetry.addData("State", state);
                 telemetry.addData("Time", String.format("%02d:%02d:%02d", hour, minute, second));
@@ -111,8 +109,6 @@ public class Bell extends OpMode {
                     moveTimer.reset();
                     isMoving = true;
                 }
-                
-            
 
                 if (moveTimer.seconds() < TIME_PER_RUN) {
                     double leftPower = BASE_POWER * direction, rightPower = BASE_POWER * direction;
@@ -124,7 +120,7 @@ public class Bell extends OpMode {
                     double front_dist = DF.getDistance(DistanceUnit.CM);
                     double back_dist = DB.getDistance(DistanceUnit.CM);
                     double diff = Math.abs(Math.abs(front_dist - back_dist) - 0.2);
-                    
+
                     if (front_dist < back_dist) {
                         if (direction == 1) {
                             rightPower += diff / 5;
@@ -137,9 +133,9 @@ public class Bell extends OpMode {
                         } else {
                             rightPower -= diff / 5;
                         }
-                        
+
                     }
-                    
+
                     leftPower = Math.min(Math.max(leftPower, -1), 1);
                     rightPower = Math.min(Math.max(rightPower, -1), 1);
                     l.setPower(leftPower);
@@ -176,15 +172,24 @@ public class Bell extends OpMode {
                     isMoving = false;
                 }
                 break;
+
             case DONE:
+                requestOpModeStop();
                 break;
-        } 
-    }
-    private boolean hasReachedTime(int hNow, int mNow, int sNow, int hTarget, int mTarget, int sTarget) {
-        return (hNow > hTarget ||
-            (hNow == hTarget && (mNow > mTarget || (mNow == mTarget && sNow >= sTarget))))
-            &&
-            (hNow < hTarget ||
-            (hNow == hTarget && (mNow < mTarget + 1 || (mNow == mTarget + 1 && sNow < sTarget))));
         }
     }
+
+    private boolean hasReachedTime(int hNow, int mNow, int sNow, int hTarget, int mTarget, int sTarget) {
+        if (enableLateRuns) {
+            return (hNow > hTarget ||  (hNow == hTarget && (mNow > mTarget || (mNow == mTarget && sNow >= sTarget))));
+        } 
+        else {
+            return (hNow > hTarget ||
+                    (hNow == hTarget && (mNow > mTarget || (mNow == mTarget && sNow >= sTarget))))
+              &&
+                   (hNow < hTarget || (hNow == hTarget && (mNow < mTarget + 1 || (mNow == mTarget + 1 && sNow < sTarget))));
+        }
+    }
+}
+
+
