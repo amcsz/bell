@@ -186,29 +186,22 @@ public class Bell extends OpMode {
     private boolean hasReachedTime(
         int hNow, int mNow, int sNow,
         int hTarget, int mTarget, int sTarget
-) {
-    if (enableLateRuns) {
-        return (hNow > hTarget) ||
-               (hNow == hTarget &&
-                   (mNow > mTarget ||
-                   (mNow == mTarget && sNow >= sTarget)));
-    } else {
-        return (
-                   (hNow > hTarget) ||
+    ) {
+        boolean res = (hNow > hTarget) ||
                    (hNow == hTarget &&
                        (mNow > mTarget ||
-                       (mNow == mTarget && sNow >= sTarget)))
-               )
-               &&
+                       (mNow == mTarget && sNow >= sTarget)));
+        if (enableLateRuns) {
+            return res;
+        }
+        return res &&
                (
                    (hNow < hTarget) ||
                    (hNow == hTarget &&
                        (mNow < mTarget + 1 ||
                        (mNow == mTarget + 1 && sNow < sTarget)))
-               );
+               ); 
     }
-}
-
 }
 
 
