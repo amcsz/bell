@@ -20,7 +20,9 @@ public class Bell extends OpMode {
     private final double BELL_SPEED = 1;
     private final double TIME_PER_RUN = 30;
     private final double BASE_POWER = 0.15;
-
+    
+    
+    // set to false for production
     private final boolean enableLateRuns = false;
 
     private final int[][] times = {
@@ -91,8 +93,7 @@ public class Bell extends OpMode {
                     if (hasReachedTime(hour, minute, second, times[0][0], times[0][1], times[0][2]) && (!ran[0])
                      || hasReachedTime(hour, minute, second, times[2][0], times[2][1], times[2][2]) && (!ran[2])) {
                         direction = 1;
-                    }
-                    if (hasReachedTime(hour, minute, second, times[1][0], times[1][1], times[1][2]) && (!ran[1])
+                    } else if (hasReachedTime(hour, minute, second, times[1][0], times[1][1], times[1][2]) && (!ran[1])
                      || hasReachedTime(hour, minute, second, times[3][0], times[3][1], times[3][2]) && (!ran[3])) {
                         direction = -1;
                     }
@@ -115,12 +116,9 @@ public class Bell extends OpMode {
                 }
 
                 if (moveTimer.seconds() < TIME_PER_RUN) {
-                    double leftPower = BASE_POWER * direction, rightPower = BASE_POWER * direction;
-                    if (direction == -1) {
-                        leftPower -= 0.04;
-                    } else if (direction == 1) {
-                        leftPower += 0.04;
-                    }
+                    double leftPower = BASE_POWER * direction;
+                    double rightPower = BASE_POWER * direction;
+                    
                     double front_dist = DF.getDistance(DistanceUnit.CM);
                     double back_dist = DB.getDistance(DistanceUnit.CM);
                     double diff = Math.abs(Math.abs(front_dist - back_dist) - 0.2);
@@ -137,13 +135,23 @@ public class Bell extends OpMode {
                         } else {
                             rightPower -= diff / 5;
                         }
-
+                    }
+                    
+                    if (((int)moveTimer.seconds() % 10) / 5 == 0) {
+                        telemetry.addData("pulsing", "true");
+                        if (direction == -1) {
+                            leftPower -= 0.06;
+                        } else if (direction == 1) {
+                            leftPower += 0.06;
+                        }
                     }
 
                     leftPower = Math.min(Math.max(leftPower, -1), 1);
                     rightPower = Math.min(Math.max(rightPower, -1), 1);
                     l.setPower(leftPower);
                     r.setPower(rightPower);
+                    b.setPower(-1 * BELL_SPEED);
+                    
                     telemetry.addData("left", leftPower);
                     telemetry.addData("right", rightPower);
                     if (direction == 1) {
@@ -164,7 +172,6 @@ public class Bell extends OpMode {
                     telemetry.addData("direction", direction);
                     telemetry.addData("timer", moveTimer.seconds());
                     telemetry.update();
-                    b.setPower(-1 * BELL_SPEED);
                 } else {
                     ran[numberRan] = true;
                     numberRan++;
@@ -203,5 +210,4 @@ public class Bell extends OpMode {
                ); 
     }
 }
-
 
