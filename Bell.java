@@ -1,6 +1,9 @@
 package org.firstinspires.ftc.teamcode;
 
 import java.util.Calendar;
+import java.util.Arrays;
+import java.util.List;
+import java.util.ArrayList;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -25,12 +28,15 @@ public class Bell extends OpMode {
     // set to false for production
     private final boolean enableLateRuns = false;
 
-    private final int[][] times = {
-        {14, 0, 0},
-        {14, 50, 0},
-        {15, 0, 0},
-        {15, 55, 0}
-    };
+    ArrayList<ArrayList<Integer>> times = new ArrayList<>(
+        Arrays.asList(
+            new ArrayList<>(Arrays.asList(10, 50, 0, -1)),
+            new ArrayList<>(Arrays.asList(10, 33, 0, 1)),
+            new ArrayList<>(Arrays.asList(10, 1, 0, -1)),
+            new ArrayList<>(Arrays.asList(10, 0, 0, 1))
+        )
+    );
+
 
     private DcMotor l;
     private DcMotor r;
@@ -85,19 +91,14 @@ public class Bell extends OpMode {
 
         switch (state) {
             case WAITING:
-                if (hasReachedTime(hour, minute, second, times[0][0], times[0][1], times[0][2]) && (!ran[0])
-                || hasReachedTime(hour, minute, second, times[1][0], times[1][1], times[1][2]) && (!ran[1])
-                || hasReachedTime(hour, minute, second, times[2][0], times[2][1], times[2][2]) && (!ran[2])
-                || hasReachedTime(hour, minute, second, times[3][0], times[3][1], times[3][2]) && (!ran[3])) {
-                    state = State.RUNNING_ACTION;
-                    if (hasReachedTime(hour, minute, second, times[0][0], times[0][1], times[0][2]) && (!ran[0])
-                     || hasReachedTime(hour, minute, second, times[2][0], times[2][1], times[2][2]) && (!ran[2])) {
-                        direction = 1;
-                    } else if (hasReachedTime(hour, minute, second, times[1][0], times[1][1], times[1][2]) && (!ran[1])
-                     || hasReachedTime(hour, minute, second, times[3][0], times[3][1], times[3][2]) && (!ran[3])) {
-                        direction = -1;
+                for (int i = times.size() - 1; i >= 0; i--) {
+                    ArrayList<Integer> time = times.get(i);
+                    if (hasReachedTime(time)) {
+                           state = State.RUNNING_ACTION;
+                           direction = time.get(3);
+                           times.remove(i);
+                           break;
                     }
-
                 }
                 telemetry.addData("State", state);
                 telemetry.addData("Time", String.format("%02d:%02d:%02d", hour, minute, second));
@@ -137,12 +138,12 @@ public class Bell extends OpMode {
                         }
                     }
                     
-                    if (((int)moveTimer.seconds() % 10) / 5 == 0) {
+                    if (((int)moveTimer.seconds() % 10) < 8) {
                         telemetry.addData("pulsing", "true");
                         if (direction == -1) {
-                            leftPower -= 0.06;
+                            leftPower -= 0.08;
                         } else if (direction == 1) {
-                            leftPower += 0.06;
+                            leftPower += 0.08;
                         }
                     }
 
@@ -150,7 +151,7 @@ public class Bell extends OpMode {
                     rightPower = Math.min(Math.max(rightPower, -1), 1);
                     l.setPower(leftPower);
                     r.setPower(rightPower);
-                    b.setPower(-1 * BELL_SPEED);
+                    b.setPower(BELL_SPEED);
                     
                     telemetry.addData("left", leftPower);
                     telemetry.addData("right", rightPower);
@@ -190,10 +191,14 @@ public class Bell extends OpMode {
         }
     }
 
-    private boolean hasReachedTime(
-        int hNow, int mNow, int sNow,
-        int hTarget, int mTarget, int sTarget
-    ) {
+    private boolean hasReachedTime(ArrayList<Integer> target) {
+        int hTarget = target.get(0);
+        int mTarget = target.get(1);
+        int sTarget = target.get(2);
+        Calendar now = Calendar.getInstance();
+        int hNow = now.get(Calendar.HOUR_OF_DAY);
+        int mNow = now.get(Calendar.MINUTE);
+        int sNow = now.get(Calendar.SECOND);
         boolean res = (hNow > hTarget) ||
                    (hNow == hTarget &&
                        (mNow > mTarget ||
