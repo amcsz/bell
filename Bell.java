@@ -22,18 +22,18 @@ public class Bell extends OpMode {
 
     private final double BELL_SPEED = 1;
     private final double TIME_PER_RUN = 30;
-    private final double BASE_POWER = 0.15;
+    private final double BASE_POWER = 0.12;
     
     
     // set to false for production
-    private final boolean enableLateRuns = false;
+    private final boolean enableLateRuns = true;
 
     ArrayList<ArrayList<Integer>> times = new ArrayList<>(
         Arrays.asList(
-            new ArrayList<>(Arrays.asList(10, 50, 0, -1)),
-            new ArrayList<>(Arrays.asList(10, 33, 0, 1)),
-            new ArrayList<>(Arrays.asList(10, 1, 0, -1)),
-            new ArrayList<>(Arrays.asList(10, 0, 0, 1))
+            new ArrayList<>(Arrays.asList(16, 4, 0, -1)),
+            new ArrayList<>(Arrays.asList(16, 3, 0, 1)),
+            new ArrayList<>(Arrays.asList(16, 2, 0, -1)),
+            new ArrayList<>(Arrays.asList(16, 1, 0, 1))
         )
     );
 
@@ -126,9 +126,9 @@ public class Bell extends OpMode {
 
                     if (front_dist < back_dist) {
                         if (direction == 1) {
-                            rightPower += diff / 5;
+                            rightPower += diff / 2;
                         } else {
-                            leftPower -= diff / 5;
+                            leftPower -= diff / 2;
                         }
                     } else {
                         if (direction == 1) {
@@ -138,20 +138,40 @@ public class Bell extends OpMode {
                         }
                     }
                     
-                    if (((int)moveTimer.seconds() % 10) < 8) {
-                        telemetry.addData("pulsing", "true");
+                    
+                    if (front_dist + back_dist > 9) {
+                        telemetry.addData("pulsing towards wall", "true");
                         if (direction == -1) {
                             leftPower -= 0.08;
+                            rightPower += 0.08;
                         } else if (direction == 1) {
                             leftPower += 0.08;
+                            rightPower -= 0.08;
                         }
                     }
+                    if (front_dist + back_dist < 8) {
+                        telemetry.addData("pulsing away from wall", "true");
+                        if (direction == -1) {
+                            leftPower += 0.08;
+                            rightPower -= 0.08;
+                        } else if (direction == 1) {
+                            leftPower -= 0.05;
+                            rightPower += 0.05;
+                        }
+                    }
+                    if (direction == -1 && front_dist + back_dist < 7) {
+                        leftPower = 0;
+                        rightPower = -0.3;
+                    }
+                    
+                    
 
                     leftPower = Math.min(Math.max(leftPower, -1), 1);
                     rightPower = Math.min(Math.max(rightPower, -1), 1);
                     l.setPower(leftPower);
                     r.setPower(rightPower);
-                    b.setPower(BELL_SPEED);
+                    b.setPower(-1 * BELL_SPEED);
+                    telemetry.addData("totalDist", front_dist + back_dist);
                     
                     telemetry.addData("left", leftPower);
                     telemetry.addData("right", rightPower);
